@@ -1,0 +1,126 @@
+{
+  "name": "dsh-agent-team-switchable",
+  "version": "0.1.0",
+  "description": "Agent Teams with independent member models, reasoning levels, and persistent defaults for future members.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lan4jn/dsh-agent-team-switchable.git"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "main": "./lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./lib/index.js"
+    },
+    "./runtime": {
+      "types": "./src/runtime/index.ts",
+      "default": "./lib/runtime.js"
+    },
+    "./tools": {
+      "types": "./src/tools/index.ts",
+      "default": "./lib/tools.js"
+    },
+    "./invariant": {
+      "types": "./src/runtime/invariant.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./client": {
+      "types": "./src/client/index.ts",
+      "default": "./lib/client.js"
+    },
+    "./types": {
+      "types": "./src/types.ts",
+      "default": "./lib/types.js"
+    },
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-api-gateway",
+        "@deepseek-ai/dsh-client-ui-model-selection",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib/",
+    "src/",
+    "scripts/",
+    "tsconfig.json",
+    "cordis.patch.yml",
+    "LICENSE",
+    "UPSTREAM-LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepare": "npm run build",
+    "prepack": "npm run build",
+    "test": "vitest run",
+    "check": "node --test tests/package.test.mjs"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/dsh-agent": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-api-gateway": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-api-session-controller": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-brand": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-store": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-model-selection": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-workspace": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-invariants": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session-persistence": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session-projection": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "3.18.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "esbuild": "^0.28.1",
+    "lightningcss": "^1.32.0",
+    "vitest": "^4.1.8",
+    "@testing-library/react": "^16.1.0",
+    "jsdom": "^26.1.0"
+  }
+}

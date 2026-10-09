@@ -1,0 +1,37 @@
+# 独立团队插件：替代默认团队实现，不与其重复注册。
+# 若已启用官方 Agent Teams bundle，请将本 bundle 放在它之后。
+- id: tool-subagent-control
+  disabled: true
+- id: tool-subagent-list-agents
+  disabled: true
+- id: tool-subagent
+  disabled: true
+- id: tool-subagent-fork
+  disabled: true
+
+- id: agent-team
+  name: '@deepseek-ai/dsh-experimental-agent-team'
+  disabled: true
+- id: tool-agent-team
+  name: '@deepseek-ai/dsh-experimental-tool-agent-team'
+  disabled: true
+- id: ui-agent-team
+  name: '@deepseek-ai/dsh-experimental-client-ui-agent-team'
+  disabled: true
+
+- insert:
+    - id: team-switchable-runtime
+      name: dsh-agent-team-switchable/runtime
+      config:
+        maxMembers: 8
+        maxTasks: 256
+        maxPendingMessagesPerMember: 64
+        maxMessageBytes: 65536
+        disposalTimeoutMs: 5000
+    - id: team-switchable-tools
+      name: dsh-agent-team-switchable/tools
+      config:
+        freshProvider: spawn
+        forkProvider: fork
+    - id: team-switchable-ui
+      name: dsh-agent-team-switchable
