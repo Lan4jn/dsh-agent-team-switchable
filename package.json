@@ -1,7 +1,7 @@
 {
   "name": "dsh-agent-team-switchable",
-  "version": "0.1.0",
-  "description": "Agent Teams with independent member models, reasoning levels, and persistent defaults for future members.",
+  "version": "0.2.0",
+  "description": "Additive Agent Teams model settings: preserves official teams, tools, UI and core.",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -16,18 +16,6 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./lib/index.js"
-    },
-    "./runtime": {
-      "types": "./src/runtime/index.ts",
-      "default": "./lib/runtime.js"
-    },
-    "./tools": {
-      "types": "./src/tools/index.ts",
-      "default": "./lib/tools.js"
-    },
-    "./invariant": {
-      "types": "./src/runtime/invariant.ts",
-      "default": "./lib/invariant.js"
     },
     "./client": {
       "types": "./src/client/index.ts",
@@ -100,7 +88,8 @@
     "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.2",
     "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2",
     "@deepseek-ai/dsh-client-ui-workspace": "0.2.0-rc.2",
-    "@deepseek-ai/dsh-invariants": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-experimental-agent-team": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-storage-domain": "0.2.0-rc.2",
     "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
     "@deepseek-ai/dsh-session": "0.2.0-rc.2",
     "@deepseek-ai/dsh-session-persistence": "0.2.0-rc.2",
@@ -113,7 +102,12 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-experimental-agent-team": { "optional": true }
+  },
   "devDependencies": {
+    "@deepseek-ai/dsh-experimental-agent-team": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-experimental-tool-agent-team": "0.2.0-rc.2",
     "@types/node": "^22.20.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",

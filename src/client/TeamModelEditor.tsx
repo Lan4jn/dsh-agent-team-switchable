@@ -1,10 +1,11 @@
 /** Inline model form over the existing read-only model catalog store. */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { ModelProviderGroup, ModelSelection, ModelCatalogFailure } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { ModelProviderGroup, ModelCatalogFailure } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { TeamModelSelection as ModelSelection } from '../types.ts'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
-import css from './TeamAction.module.css'
+import css from './TeamModelSettings.module.css'
 
 /** Read-only face of the shared model directory; selection remains team-local. */
 export interface TeamModelCatalogState {
@@ -42,7 +43,8 @@ export function TeamModelEditor(props: TeamModelEditorProps) {
     mounted.current = true
     return () => { mounted.current = false }
   }, [])
-  const catalog = useSyncExternalStore(directory.subscribe, directory.getSnapshot, directory.getSnapshot)
+  const liveCatalog = useSyncExternalStore(directory.subscribe, directory.getSnapshot, directory.getSnapshot)
+  const frozenCatalog = useRef(liveCatalog)
   const [route, setRoute] = useState(
     initial == null
       ? (isDefault ? '__inherit__' : '')
@@ -50,17 +52,22 @@ export function TeamModelEditor(props: TeamModelEditorProps) {
   )
   const [effort, setEffort] = useState(initial?.reasoningEffort ?? '')
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+  const catalog = saving ? frozenCatalog.current : liveCatalog
   const [error, setError] = useState<string | null>(null)
   const options = catalog.groups.flatMap(group => group.models.map(model => ({
     key: JSON.stringify([group.id, model.id]), group, model,
   })))
   const selected = options.find(option => option.key === route)
   const isInherit = isDefault && route === '__inherit__'
+  const retainedRoute = route === '' || route === '__inherit__' ? null : JSON.parse(route) as [string, string]
   const loading = catalog.status === 'idle' || catalog.status === 'loading'
   const submit = async (): Promise<void> => {
-    if (saving) return
+    if (savingRef.current) return
+    frozenCatalog.current = liveCatalog
     if (isInherit) {
       if (props.mode !== 'default') return
+      savingRef.current = true
       setSaving(true)
       setError(null)
       try {
@@ -69,11 +76,13 @@ export function TeamModelEditor(props: TeamModelEditorProps) {
       } catch (reason) {
         if (!mounted.current) return
         setError(String(reason))
+        savingRef.current = false
         setSaving(false)
       }
       return
     }
     if (selected === undefined || isEffortInvalid) return
+    savingRef.current = true
     setSaving(true)
     setError(null)
     try {
@@ -82,6 +91,7 @@ export function TeamModelEditor(props: TeamModelEditorProps) {
     } catch (reason) {
       if (!mounted.current) return
       setError(String(reason))
+      savingRef.current = false
       setSaving(false)
     }
   }
@@ -108,7 +118,7 @@ export function TeamModelEditor(props: TeamModelEditorProps) {
           {isDefault
             ? <option value="__inherit__">{t('defaultModel.inherit')}</option>
             : <option value="">{t('model.choose')}</option>}
-          {route !== '' && route !== '__inherit__' && selected === undefined && <option value={route}>{initial?.model} · {t('model.unavailable')}</option>}
+          {route !== '' && route !== '__inherit__' && selected === undefined && <option value={route}>{retainedRoute?.join('/')} · {t('model.unavailable')}</option>}
           {catalog.groups.map(group => <optgroup key={group.id} label={group.name}>
             {options.filter(option => option.group.id === group.id).map(option => <option key={option.key} value={option.key}>{option.model.name}</option>)}
           </optgroup>)}

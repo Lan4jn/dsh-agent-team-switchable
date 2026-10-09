@@ -1,31 +1,27 @@
 /// <reference path="./css-modules.d.ts" />
-/** Browser entry registering the Agent Teams conversation-header action. */
-
+/** Browser entry for the additive Team model settings contribution. */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-gateway/client'
-import teamModelsRemote from 'dsh-agent-team-switchable/remote'
-import { registerAgentTeamUi } from './mount.ts'
+import teamSettingsRemote from 'dsh-agent-team-switchable/remote'
+import { registerTeamModelSettingsUi } from './mount.ts'
 
 export { inject } from './mount.ts'
-export type { TeamActionInjected, TeamActionProps } from './TeamAction.tsx'
+export type { TeamModelSettingsInjected, TeamModelSettingsProps } from './TeamModelSettingsAction.tsx'
 export type { TeamKey } from './locales.ts'
 
-/**
- * Register the Team locale dictionaries and header action on the Client Context.
- * @param ctx - Client Context with the declared `inject` services available.
- */
 export async function apply(ctx: ClientContext): Promise<void> {
-  const disposeRemote = await ctx.remote.$mount(teamModelsRemote)
-  const ui = ctx.inject(['remote.agent-team-models'], registerAgentTeamUi)
+  // The remote contribution must exist before dependency injection resolves it.
+  const disposeRemote = await ctx.remote.$mount(teamSettingsRemote)
+  let ui: ReturnType<ClientContext['inject']> | undefined
   try {
+    ui = ctx.inject(['remote.team-model-settings'], registerTeamModelSettingsUi)
     await ui
   } catch (error) {
-    await ui.dispose()
-    await disposeRemote()
+    try { await ui?.dispose() } finally { await disposeRemote() }
     throw error
   }
+  const ownedUi = ui
   ctx.effect(() => async () => {
-    await ui.dispose()
-    await disposeRemote()
-  }, 'client-ui-agent-team: model remote and UI')
+    try { await ownedUi.dispose() } finally { await disposeRemote() }
+  }, 'team-model-settings: UI and remote contribution')
 }

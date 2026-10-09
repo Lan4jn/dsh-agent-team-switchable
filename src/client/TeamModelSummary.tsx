@@ -1,9 +1,9 @@
 /** Compact, lossless display of current and team-local next-turn routes. */
 import { useId, useState } from 'react'
-import type { ModelSelection } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { TeamModelSelection as ModelSelection } from '../types.ts'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
-import css from './TeamAction.module.css'
+import css from './TeamModelSettings.module.css'
 
 function sameRoute(current: ModelSelection, next: ModelSelection): boolean {
   return current.provider === next.provider && current.model === next.model
@@ -50,7 +50,7 @@ export function TeamModelSummary({ current, next, t }: {
   if (current == null && next == null) return null
   return (
     <div className={css.modelSummary}>
-      {current != null && <ModelRoute selection={current} label={different ? t('model.current') : undefined} t={t} />}
+      {current != null && <ModelRoute selection={current} label={t('model.current')} t={t} />}
       {next != null && (current == null || different) && <ModelRoute selection={next} label={t('model.next')} t={t} />}
       {different && <p className={css.nextTurnHint}>{t('model.pendingHint')}</p>}
     </div>

@@ -1,65 +1,54 @@
-/** Explicit plugin-local Host-for-Client contract; no Core generator is bundled. */
+/** Plugin-owned RPC contract, independent of the official Agent Teams namespace. */
 import { z } from 'zod'
 import type { InvocationDescriptor, RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
-import type { TeamModelSelection, TeamSelectDefaultModelRequest, TeamSelectMemberModelRequest } from './types.ts'
+import type { TeamModelSettingsView, TeamSettingsRequest, TeamSelectDefaultModelRequest, TeamSelectMemberModelRequest } from './types.ts'
 
 const packageName = 'dsh-agent-team-switchable'
-const selection = () => z.object({
-  provider: z.string().readonly(),
-  model: z.string().readonly(),
-  reasoningEffort: z.string().readonly().optional(),
+const namespace = 'team-model-settings'
+const selection = () => z.object({ provider: z.string(), model: z.string(), reasoningEffort: z.string().optional() })
+const sessionId = () => z.intersection(z.string(), z.unknown())
+const viewSchema = () => z.object({
+  teamId: sessionId(), revision: z.number().int().nonnegative(),
+  defaultModel: selection().nullable(),
+  members: z.array(z.object({
+    id: sessionId(), name: z.string(), description: z.string().optional(),
+    phase: z.enum(['provisioning', 'active', 'failed']), status: z.enum(['running', 'inactive']),
+    currentModel: selection().optional(), nextModel: selection().optional(),
+  })),
 })
-const sessionId = () => z.intersection(z.string(), z.unknown()).readonly()
 const lazy = <T>(create: () => T): (() => T) => {
   let value: T | undefined
   return () => (value ??= create())
 }
-const memberRequest = lazy(() => z.object({
-  leadSessionId: sessionId(), target: z.string().readonly(), selection: selection().readonly(),
-}))
-const memberResult = lazy(selection)
-const defaultRequest = lazy(() => z.object({
-  leadSessionId: sessionId(), selection: z.union([z.literal(null), selection()]).readonly(),
-}))
-const defaultResult = lazy(() => z.union([z.literal(null), selection()]))
+const view = lazy(viewSchema)
+const requests = {
+  getSettings: { type: 'TeamSettingsRequest', create: lazy(() => z.object({ leadSessionId: sessionId() })) },
+  selectMemberModel: { type: 'TeamSelectMemberModelRequest', create: lazy(() => z.object({ leadSessionId: sessionId(), target: z.string(), selection: selection() })) },
+  selectTeamDefaultModel: { type: 'TeamSelectDefaultModelRequest', create: lazy(() => z.object({ leadSessionId: sessionId(), selection: selection().nullable() })) },
+}
 
-/** Public protocol descriptors shared by this package's two faces. */
-export const descriptors: readonly InvocationDescriptor[] = [
-  {
-    id: `${packageName}#agent-team-models/selectMemberModel`,
-    service: 'teamModelController', namespace: 'agent-team-models', method: 'selectMemberModel',
-    invocation: { kind: 'direct' },
-    parameters: [{
-      name: 'request', wire: 'request', source: 'json',
-      codec: { mode: 'strict', typeSymbol: `${packageName}/types#TeamSelectMemberModelRequest`, create: memberRequest },
-    }],
-    result: { mode: 'strict', typeSymbol: `${packageName}/types#TeamModelSelection`, create: memberResult },
-  },
-  {
-    id: `${packageName}#agent-team-models/selectTeamDefaultModel`,
-    service: 'teamModelController', namespace: 'agent-team-models', method: 'selectTeamDefaultModel',
-    invocation: { kind: 'direct' },
-    parameters: [{
-      name: 'request', wire: 'request', source: 'json',
-      codec: { mode: 'strict', typeSymbol: `${packageName}/types#TeamSelectDefaultModelRequest`, create: defaultRequest },
-    }],
-    result: {
-      mode: 'strict', typeSymbol: `${packageName}#agent-team-models/selectTeamDefaultModel:result`, create: defaultResult,
-    },
-  },
-]
+export const descriptors: readonly InvocationDescriptor[] = Object.entries(requests).map<InvocationDescriptor>(([method, request]) => ({
+  id: `${packageName}#${namespace}/${method}`,
+  service: 'teamModelSettings', namespace, method, invocation: { kind: 'direct' },
+  parameters: [{ name: 'request', wire: 'request', source: 'json', codec: {
+    mode: 'strict', typeSymbol: `${packageName}/types#${request.type}`, create: request.create,
+  } }],
+  result: { mode: 'strict', typeSymbol: `${packageName}/types#TeamModelSettingsView`, create: view },
+}))
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
-  interface TypertRemoteNamespace$6167656e742d7465616d2d6d6f64656c73 {
-    selectMemberModel: (request: TeamSelectMemberModelRequest) => Promise<RemoteResult<TeamModelSelection>>
-    selectTeamDefaultModel: (request: TeamSelectDefaultModelRequest) => Promise<RemoteResult<TeamModelSelection | null>>
+  interface TypertRemoteNamespace$7465616d2d6d6f64656c2d73657474696e6773 {
+    getSettings: (request: TeamSettingsRequest) => Promise<RemoteResult<TeamModelSettingsView>>
+    selectMemberModel: (request: TeamSelectMemberModelRequest) => Promise<RemoteResult<TeamModelSettingsView>>
+    selectTeamDefaultModel: (request: TeamSelectDefaultModelRequest) => Promise<RemoteResult<TeamModelSettingsView>>
   }
   interface TypertRemoteMap {
-    'agent-team-models/selectMemberModel': (request: TeamSelectMemberModelRequest) => Promise<RemoteResult<TeamModelSelection>>
-    'agent-team-models/selectTeamDefaultModel': (request: TeamSelectDefaultModelRequest) => Promise<RemoteResult<TeamModelSelection | null>>
+    'team-model-settings/getSettings': (request: TeamSettingsRequest) => Promise<RemoteResult<TeamModelSettingsView>>
+    'team-model-settings/selectMemberModel': (request: TeamSelectMemberModelRequest) => Promise<RemoteResult<TeamModelSettingsView>>
+    'team-model-settings/selectTeamDefaultModel': (request: TeamSelectDefaultModelRequest) => Promise<RemoteResult<TeamModelSettingsView>>
   }
   interface TypertRemoteNamespaceMap {
-    'agent-team-models': TypertRemoteNamespace$6167656e742d7465616d2d6d6f64656c73
+    'team-model-settings': TypertRemoteNamespace$7465616d2d6d6f64656c2d73657474696e6773
   }
 }
 

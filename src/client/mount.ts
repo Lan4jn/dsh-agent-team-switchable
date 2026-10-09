@@ -1,81 +1,35 @@
-/** Source-safe Agent Teams browser registration. */
-
+/** Register only this plugin's locale and additive public header slot. */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-gateway/client'
 import type {} from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import type {} from 'dsh-agent-team-switchable/remote'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
-import { TeamAction, type TeamActionInjected } from './TeamAction.tsx'
+import { TeamModelSettingsAction, type TeamModelSettingsInjected } from './TeamModelSettingsAction.tsx'
 import { en, NS, zh, type TeamKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** Agent Teams roster and task-board copy. */
-    'agent-team': TeamKey
+    'team-model-settings': TeamKey
   }
 }
+export const inject = ['slots', 'locale', 'remote', 'modelDirectories']
 
-/** Required browser services for navigation, slots, and localized copy. */
-export const inject = ['sessions', 'uiWorkspace', 'slots', 'locale', 'remote', 'modelDirectories']
-
-/**
- * Register the Team locale dictionaries and the conversation-header action.
- * The panel reads the Lead Session's `agentTeam` projection from the shared
- * Session store. Only an explicit save invokes this plugin's team model RPC.
- * @param ctx - Client Context carrying navigation, locale, slots, shared catalog, and Remote services.
- */
-export function registerAgentTeamUi(ctx: ClientContext): void {
-  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'client-ui-agent-team: dictionaries')
-  const sessions = ctx.sessions
-  const leadSessionId = (sessionId: SessionId): SessionId => {
-    const address = sessions.binding(sessionId)?.session.getSnapshot().subagent?.address
-    return address?.parentSessionId ?? sessionId
+export function registerTeamModelSettingsUi(ctx: ClientContext): void {
+  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'team-model-settings: dictionaries')
+  const actions: TeamModelSettingsInjected = {
+    api: ctx.remote['team-model-settings'],
+    modelDirectoryFor: leadSessionId => ctx.modelDirectories.directoryFor(leadSessionId).store,
+    // Load the Lead's shared catalog only. Never call directory.select for teammates.
+    loadCatalogFor: leadSessionId => ctx.modelDirectories.directoryFor(leadSessionId).load(),
   }
-
-  const actions: TeamActionInjected = {
-    async selectMemberModel(parentSessionId, target, selection): Promise<void> {
-      const response = await ctx.remote['agent-team-models'].selectMemberModel({
-        leadSessionId: parentSessionId, target, selection,
-      })
-      if (!response.ok) throw new Error(response.error.message)
-    },
-    async selectTeamDefaultModel(parentSessionId, selection): Promise<void> {
-      const response = await ctx.remote['agent-team-models'].selectTeamDefaultModel({
-        leadSessionId: parentSessionId, selection,
-      })
-      if (!response.ok) throw new Error(response.error.message)
-    },
-    openTeammate(sessionId: SessionId, childSessionId: SessionId): void {
-      const parentSessionId = leadSessionId(sessionId)
-      if ((sessions.retainInfo(sessionId).getSnapshot().retainedBy.mainView ?? 0) === 0) return
-      if (childSessionId === parentSessionId) {
-        ctx.uiWorkspace.openSession(parentSessionId)
-        return
-      }
-      ctx.uiWorkspace.openSession({
-        parentSessionId,
-        childSessionId,
-        mode: 'continuable',
-      })
-    },
-  }
-
-  ctx.slots.inject(
-    'conversation.session.header.actions',
-    () => ctx.slots.register({
-      name: 'conversation.session.header.actions',
-      id: 'agent-team',
-      order: -20,
-      locale: NS,
-      inject: sessionId => ({
-        ...actions,
-        modelDirectory: ctx.modelDirectories.directoryFor(sessionId).store,
-      }),
-    }, TeamAction),
-  )
+  ctx.slots.inject('conversation.session.header.actions', () => ctx.slots.register({
+    name: 'conversation.session.header.actions',
+    id: 'team-model-settings',
+    order: -19,
+    locale: NS,
+    inject: () => actions,
+  }, TeamModelSettingsAction))
 }

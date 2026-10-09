@@ -2,7 +2,7 @@ import { build } from 'esbuild'
 import { transform } from 'lightningcss'
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, realpath, rm } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -42,12 +42,15 @@ const common = {
   absWorkingDir: root, bundle: true, write: false, logLevel: 'warning', preserveSymlinks: true,
   sourcemap: false, legalComments: 'none', plugins: [externalShared],
 }
-await mkdir(join(root, 'lib'), { recursive: true })
+const output = join(root, 'lib')
+await mkdir(output, { recursive: true })
+if (await realpath(output) !== join(await realpath(root), 'lib')) throw new Error('Refusing to clean a redirected output directory')
+await rm(output, { recursive: true })
+await mkdir(output)
 const require = createRequire(import.meta.url)
 await writeFile(join(root, 'lib/zod.LICENSE'), await readFile(join(dirname(require.resolve('zod/package.json')), 'LICENSE')))
 const entries = {
-  index: 'src/index.ts', runtime: 'src/runtime/index.ts', tools: 'src/tools/index.ts',
-  invariant: 'src/runtime/invariant.ts', types: 'src/types.ts',
+  index: 'src/index.ts', types: 'src/types.ts',
   'typert.host': 'src/host-contract.ts', 'typert.remote-client': 'src/remote.ts',
 }
 for (const [name, entry] of Object.entries(entries)) {
@@ -71,4 +74,4 @@ await writeFile(join(root, 'lib/client.js'),
   `window.__ModuleLoader__.load({id:${JSON.stringify(packageName)},factory:(require)=>{var module={exports:{}};var exports=module.exports;\n${browser.outputFiles[0].text}\nreturn module.exports;}});\n`)
 await writeFile(join(root, 'lib/typert.host.d.ts'), "export { TYPERT } from '../src/host-contract.ts'\n")
 await writeFile(join(root, 'lib/typert.remote-client.d.ts'), "export { TYPERT_REMOTE, default } from '../src/remote.ts'\n")
-console.log(`Built ${packageName}: Host/runtime/tools/invariant/types, Typert and browser factory`)
+console.log(`Built ${packageName}: additive Host/settings/tools, own types/Typert and browser factory`)

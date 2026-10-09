@@ -1,0 +1,91 @@
+import { describe, expect, it, vi } from 'vitest'
+import { TeamSettingsController } from '../../src/client/settings-controller.ts'
+import { apiFor, deferred, lead, snapshot } from './fixtures.ts'
+
+describe('committed settings controller', () => {
+  it('uses .value and rejects a mismatched team, not fabricated projections', async () => {
+    const api = apiFor()
+    const controller = new TeamSettingsController(lead, api)
+    controller.activate()
+    await Promise.resolve()
+    expect(controller.store.getSnapshot().view).toEqual(snapshot())
+    vi.mocked(api.getSettings).mockResolvedValueOnce({ ok: true, value: { ...snapshot(2), teamId: 'other' as typeof lead } })
+    await controller.load()
+    expect(controller.store.getSnapshot().view?.revision).toBe(1)
+    expect(controller.store.getSnapshot().error).toContain('another team')
+  })
+
+  it('freezes committed settings while saving and retains them after failure', async () => {
+    const api = apiFor()
+    const controller = new TeamSettingsController(lead, api)
+    controller.activate()
+    await Promise.resolve()
+    const pending = deferred<Awaited<ReturnType<typeof api.selectTeamDefaultModel>>>()
+    vi.mocked(api.selectTeamDefaultModel).mockReturnValueOnce(pending.promise)
+    const save = controller.save(null, { provider: 'p', model: 'new' })
+    await controller.load()
+    expect(api.getSettings).toHaveBeenCalledTimes(1)
+    expect(controller.store.getSnapshot().view?.defaultModel?.model).toBe('old')
+    pending.resolve({ ok: false, error: { code: 'unavailable', message: 'save rejected' } } as Awaited<ReturnType<typeof api.selectTeamDefaultModel>>)
+    await expect(save).rejects.toThrow('save rejected')
+    expect(controller.store.getSnapshot().view?.defaultModel?.model).toBe('old')
+    expect(controller.store.getSnapshot().saving).toBe(false)
+  })
+
+  it('atomically commits the returned view and ignores an older poll', async () => {
+    const api = apiFor()
+    const controller = new TeamSettingsController(lead, api)
+    controller.activate()
+    await Promise.resolve()
+    const stale = deferred<Awaited<ReturnType<typeof api.getSettings>>>()
+    vi.mocked(api.getSettings).mockReturnValueOnce(stale.promise)
+    const loading = controller.load()
+    const committed = { ...snapshot(3), defaultModel: null }
+    vi.mocked(api.selectTeamDefaultModel).mockResolvedValueOnce({ ok: true, value: committed })
+    await controller.save(null, null)
+    stale.resolve({ ok: true, value: snapshot(2) })
+    await loading
+    expect(controller.store.getSnapshot().view).toEqual(committed)
+    vi.mocked(api.getSettings).mockResolvedValueOnce({ ok: true, value: snapshot(1) })
+    await controller.load()
+    expect(controller.store.getSnapshot().view).toEqual(committed)
+  })
+
+  it('invalidates close/reopen and mounted-generation late callbacks', async () => {
+    const api = apiFor()
+    const pending = deferred<Awaited<ReturnType<typeof api.getSettings>>>()
+    vi.mocked(api.getSettings).mockReturnValueOnce(pending.promise)
+    const controller = new TeamSettingsController(lead, api)
+    controller.activate()
+    controller.deactivate()
+    vi.mocked(api.getSettings).mockResolvedValueOnce({ ok: true, value: snapshot(2) })
+    controller.activate()
+    await Promise.resolve()
+    pending.resolve({ ok: true, value: snapshot(9) })
+    await Promise.resolve()
+    expect(controller.store.getSnapshot().view?.revision).toBe(2)
+    const saving = deferred<Awaited<ReturnType<typeof api.selectMemberModel>>>()
+    vi.mocked(api.selectMemberModel).mockReturnValueOnce(saving.promise)
+    const save = controller.save('worker', { provider: 'p', model: 'new' })
+    controller.dispose()
+    saving.resolve({ ok: true, value: snapshot(10) })
+    await save
+    expect(controller.store.getSnapshot().view?.revision).toBe(2)
+  })
+
+  it('keeps a same-Lead committed snapshot during reopen and supports retry', async () => {
+    const api = apiFor()
+    const controller = new TeamSettingsController(lead, api)
+    controller.activate()
+    await Promise.resolve()
+    controller.deactivate()
+    vi.mocked(api.getSettings).mockRejectedValueOnce(new Error('restored session disconnected'))
+    controller.activate()
+    await Promise.resolve()
+    expect(controller.store.getSnapshot().view?.revision).toBe(1)
+    expect(controller.store.getSnapshot().error).toContain('disconnected')
+    await controller.load()
+    expect(controller.store.getSnapshot().error).toBeNull()
+    expect(controller.store.getSnapshot().view?.defaultModel?.model).toBe('old')
+  })
+})

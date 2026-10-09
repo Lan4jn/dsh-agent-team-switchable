@@ -1,0 +1,30 @@
+/** Plugin-owned settings surface. All selectors stay CSS-module scoped. */
+.trigger { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 3px 7px; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font: inherit; font-size: 12px; cursor: pointer; }
+.trigger:hover, .trigger:focus-visible { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2); }
+.modelDialog { width: min(540px, calc(100vw - 32px)); max-height: 100%; overflow-y: auto; padding: 18px; gap: 12px; color: var(--dsw-alias-label-primary); font-size: 12px; }
+.modelDialogHeader { display: flex; align-items: center; gap: 10px; }
+.modelDialogHeader h2 { flex: 1; min-width: 0; margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.modelDialogClose { width: 32px; height: 32px; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.modelDialogClose:disabled { opacity: .5; cursor: default; }
+.target, .modelEditor label { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.target select, .modelEditor select { box-sizing: border-box; width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
+.modelEditor { margin: 8px 0; color: var(--dsw-alias-label-secondary); }
+.modelEditor p, .savePending { margin: 8px 0; overflow-wrap: anywhere; }
+.modelButtons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
+.modelButtons button, .error button { padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); cursor: pointer; }
+.modelButtons button:disabled { opacity: .5; cursor: default; }
+.memberList { display: grid; gap: 8px; margin-top: 14px; }
+.member { min-width: 0; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; }
+.memberHeading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.memberHeading span, .member p { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.member p { overflow-wrap: anywhere; }
+.modelSummary { min-width: 0; margin-top: 6px; }
+.modelRoute + .modelRoute { margin-top: 5px; }
+.modelLine { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.modelLabel { flex: none; font-size: 11px; color: var(--dsw-alias-label-tertiary); }
+.modelName { flex: 1; min-width: 0; padding: 2px 0; border: 0; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+.modelBadge { max-width: 30%; min-width: 0; padding: 1px 4px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px; color: var(--dsw-alias-label-tertiary); font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.modelDetails { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; overflow-wrap: anywhere; }
+.nextTurnHint, .savePending { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.error, .warning { color: var(--dsw-alias-state-error-primary); overflow-wrap: anywhere; }
+.error button { margin-left: 8px; }

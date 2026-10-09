@@ -22,7 +22,7 @@ describe('TeamModelSummary', () => {
 
   it('distinguishes same model IDs from different providers for assistive technology', () => {
     render(<TeamModelSummary t={t} current={{ provider: 'p1', model: 'same-id' }} next={{ provider: 'p2', model: 'same-id' }} />)
-    const current = screen.getByRole('button', { name: /当前模型.*p1\/same-id/u })
+    const current = screen.getByRole('button', { name: /最近已使用.*p1\/same-id/u })
     const next = screen.getByRole('button', { name: /下轮模型.*p2\/same-id/u })
     fireEvent.click(current)
     fireEvent.click(next)
