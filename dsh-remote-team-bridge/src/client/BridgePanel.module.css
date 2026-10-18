@@ -1,0 +1,156 @@
+.panel {
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 24px));
+  max-height: min(600px, calc(100vh - 32px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-overlay);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  padding-bottom: 8px;
+}
+
+.header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.closeButton {
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.closeButton:hover {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+}
+
+.section {
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.codeBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px dashed var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.codeNumber {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  font-family: monospace;
+  color: var(--dsw-alias-brand-primary);
+}
+
+.countdown {
+  font-size: 11px;
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.expired {
+  font-size: 11px;
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btnPrimary {
+  background: var(--dsw-alias-brand-primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btnDanger {
+  background: transparent;
+  color: var(--dsw-alias-state-error-primary);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btnSecondary {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btnSecondary:disabled, .btnPrimary:disabled, .btnDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deviceItem, .taskItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+}
+
+.deviceItem:last-child, .taskItem:last-child {
+  border-bottom: none;
+}
+
+.leadOnlyHint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  margin-top: 6px;
+}
