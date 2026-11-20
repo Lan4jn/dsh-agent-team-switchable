@@ -1,33 +1,44 @@
 import { describe, expect, it, vi } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 import type { Context } from '@deepseek-ai/cordis'
-import { registerTeamModelSettingsUi } from '../../src/client/mount.ts'
+import { registerTeamModelSettingsUi, inject as mountInject } from '../../src/client/mount.ts'
 import { NS, zh } from '../../src/client/locales.ts'
 
 vi.mock('dsh-agent-team-switchable/remote', () => ({ default: { namespace: 'own-remote' } }))
 import { apply } from '../../src/client/index.ts'
 
 describe('additive contribution ownership', () => {
-  it('registers only a new public header slot and own locale namespace', () => {
+  it('registers only a new public header slot and own locale namespace', async () => {
     const descriptors: unknown[] = []
     const register = vi.fn((descriptor, component) => { descriptors.push(descriptor); return component })
     const locale = vi.fn()
     const store = {}
     const load = vi.fn(async () => {})
     const select = vi.fn()
+    const release = vi.fn()
+    const retain = vi.fn(() => ({ ready: Promise.resolve(), release }))
     const ctx = {
       remote: { 'team-model-settings': {} },
       modelDirectories: { directoryFor: vi.fn(() => ({ store, load, select })) },
+      sessions: { retain },
       locale: { register: locale },
       effect: (effect: () => unknown) => effect(),
       slots: { inject: vi.fn((_name, effect) => effect()), register },
     }
     registerTeamModelSettingsUi(ctx as unknown as Context)
+    expect(mountInject).toEqual(['slots', 'locale', 'remote', 'remote.session', 'modelDirectories', 'sessions'])
     expect(locale).toHaveBeenCalledWith('team-model-settings', expect.objectContaining({ zh }))
     expect(descriptors).toEqual([expect.objectContaining({ id: 'team-model-settings', name: 'conversation.session.header.actions', locale: NS })])
-    const actions = (descriptors[0] as { inject: () => { modelDirectoryFor: (id: string) => unknown; loadCatalogFor: (id: string) => Promise<unknown> } }).inject()
-    expect(actions.modelDirectoryFor('lead')).toBe(store)
-    void actions.loadCatalogFor('lead')
+    const actions = (descriptors[0] as { inject: () => { acquireCatalogFor: (id: string, signal: AbortSignal) => Promise<{ directory: unknown; load: () => Promise<unknown>; release: () => void }> } }).inject()
+    expect(ctx.modelDirectories.directoryFor).not.toHaveBeenCalled()
+    const cancellation = new AbortController()
+    const lease = await actions.acquireCatalogFor('lead', cancellation.signal)
+    expect(retain).toHaveBeenCalledWith('lead', { source: 'teamModelSettings', signal: cancellation.signal })
+    expect(lease.directory).toBe(store)
+    await lease.load()
+    cancellation.abort()
+    lease.release()
+    expect(release).toHaveBeenCalledOnce()
     expect(select).not.toHaveBeenCalled()
   })
 

@@ -34,7 +34,7 @@
 
 ## 任务 1：TDD 转换单目标编辑器（task-18）
 
-- [ ] **步骤 1：更新编辑器行为测试，先验证红灯。**
+- [x] **步骤 1：更新编辑器行为测试，先验证红灯。**
 
 首个可直接运行的回归使用现有 fixture：
 
@@ -75,7 +75,7 @@ it('commits model changes immediately without a save button', async () => {
 
 运行：`npm test -- tests/client/team-model-editor.spec.tsx`。预期首个新用例因旧实现没有在 change 时调用 save 而失败，不能把编译错误当成目标红灯。
 
-- [ ] **步骤 2：实现与菜单约定一致的 Props。**
+- [x] **步骤 2：实现与菜单约定一致的 Props。**
 
 保留现有 ModelSelection 与 TeamModelDirectory 类型，替换 Props：
 
@@ -95,7 +95,7 @@ export type TeamModelEditorProps = {
 
 `disabled` 负责 DOM 禁用；`isLocked` 在事件时同步读取 Controller 最新锁，防止多个编辑器同一 tick 竞争。模式默认 member，与现有 API 保持一致。删除 cancel 依赖。
 
-- [ ] **步骤 3：实现单目标自动保存状态机。**
+- [x] **步骤 3：实现单目标自动保存状态机。**
 
 编辑器保留 route、effort，新增局部状态 idle/saving/saved/failed、保存中同步 ref、失败选择及请求序号。每次模型 change 先检查 `disabled || isLocked?.() || savingRef.current`，从当前目录验证完整路线，清空 effort，直接传计算得到的选择；不得依赖刚刚 setState 后尚未更新的值。
 
@@ -121,13 +121,13 @@ const selectionWithEffort = (provider: string, model: string,
 
 新增 `model.saved`、`model.unsaved` 和自动保存说明的中英文文案；现有 target/save/cancel 字典键可以保留供回归查询，但实际菜单不得渲染旧控件。
 
-- [ ] **步骤 4：验证绿灯并交接 API。**
+- [x] **步骤 4：验证绿灯并交接 API。**
 
 运行同一编辑器测试命令；记录首次红灯与最终绿灯输出。可运行 `npm run typecheck`，若菜单并行分支暂时仍有 cancel 调用，报告具体错误交给 ui-coder，不修改对方文件。只在自己的写范围修改，不执行全量构建或打包。
 
 ## 任务 2：TDD 替换菜单布局（task-19，与任务 1 并行）
 
-- [ ] **步骤 1：先用现有 Editor 编写新布局红灯。**
+- [x] **步骤 1：先用现有 Editor 编写新布局红灯。**
 
 使用已有 mountDialog/apiFor fixture，添加：
 
@@ -147,7 +147,7 @@ it('shows default and each teammate inline without a target selector', async () 
 
 运行：`npm test -- tests/client/team-model-dialog.spec.tsx`。预期旧布局缺少命名 region 和成员内联下拉而失败。
 
-- [ ] **步骤 2：移除全局 target 状态并建立稳定实例。**
+- [x] **步骤 2：移除全局 target 状态并建立稳定实例。**
 
 删除 target、editorVersion、单编辑目标判定和失效目标 reset effect。默认 editor 在 `section aria-label={t('defaultModel.title')}` 下固定渲染；成员 `article aria-label={item.name}` 使用 key={item.id}。仅 phase active 且官方 activeNames 包含的成员显示可编辑下拉；status inactive 不限制编辑。创建中和失败成员仍显示既有说明与概要。
 
@@ -168,7 +168,7 @@ it('shows default and each teammate inline without a target selector', async () 
 
 成员 callback 在实际实现中还必须结合最新 eligibility/official names 和稳定 ID 做目标校验；上述调用体现类型契约，不放宽现有权限。
 
-- [ ] **步骤 3：实现最新状态守卫及保持关闭互斥。**
+- [x] **步骤 3：实现最新状态守卫及保持关闭互斥。**
 
 `saveTarget` 参数为 `(target: string | null, selection: TeamModelSelection | null, memberId?: string)`。在同步进入 save 之前读取 `controller.store.getSnapshot()`：保存中立即拒绝；eligible 失效拒绝；非 null 目标须在最新 view 中匹配 name、id、phase active，并且最新官方名字集合包含此目标。随后冻结当前 activeNames，调用原有 `controller.save(target, selection)`。
 
@@ -176,7 +176,7 @@ it('shows default and each teammate inline without a target selector', async () 
 
 只修改插件自有菜单 DOM，保留原有 acquireCatalog、ready、release、abort、菜单 Portal、定位、视口裁剪及焦点恢复。不修改官方节点或 mount 的 `remote.session`。
 
-- [ ] **步骤 4：补全菜单和生命周期回归。**
+- [x] **步骤 4：补全菜单和生命周期回归。**
 
 测试分别用 within(default region) 和 within(member article) 定位模型与推理控件，不使用全页面唯一模型假设。覆盖：两个可编辑成员（含 inactive）互不串扰；默认仅调用 selectTeamDefaultModel；成员仅调用 selectMemberModel；同一 tick 第二个目标不能发写请求；保存中所有下拉及关闭禁用；失败保留输入与已提交概要且 retry 可恢复；轮询不触发写入；成员消失、变不可编辑以及 Lead/会话切换丢弃旧目标。
 
@@ -184,19 +184,19 @@ it('shows default and each teammate inline without a target selector', async () 
 
 运行：`npm test -- tests/client/team-model-dialog.spec.tsx tests/client/team-model-action.spec.tsx tests/client/slot-runtime.spec.tsx`。任务 1 未集成前的错误应交接，不靠修改 mocks 掩盖。
 
-- [ ] **步骤 5：整理紧凑布局并交接。**
+- [x] **步骤 5：整理紧凑布局并交接。**
 
 只使用当前 Inspect 确认的主题变量：`--dsw-alias-bg-overlay`、`--dsw-alias-bg-layer-1`、`--dsw-alias-border-l1`、`--dsw-alias-border-l2`、`--dsw-alias-label-primary`、`--dsw-alias-label-secondary` 和公开 state 颜色。默认区与成员卡片有明确分隔，模型下拉宽度占满可用行，推理等级紧邻对应模型，保留视口内滚动。
 
 ## 任务 3：独立规格和代码复核（reviewer，依赖任务 1、2）
 
-- [ ] **步骤 1：逐项核查规格和 diff。**
+- [x] **步骤 1：逐项核查规格和 diff。**
 
 对照已批准规格的 8 项验收。重点审查无常规保存按钮、立即完整路线提交、模型切换清推理、稳定 ID 及最新权限校验、全局同步锁、失败保留和重试、空闲同步不产生 RPC、晚到响应隔离。
 
 若发现缺陷，先给出失败用例和具体文件行号，由原所有者修复，不跨范围改文件。实质修复后原测试必须先捕获缺陷再通过。
 
-- [ ] **步骤 2：独立串行运行完整链。**
+- [x] **步骤 2：独立串行运行完整链。**
 
 ```bash
 npm test && npm run typecheck && npm run build && npm run check && git diff --check
@@ -204,17 +204,17 @@ npm test && npm run typecheck && npm run build && npm run check && git diff --ch
 
 预期：所有测试通过，TypeScript 无错误，构建成功，包检查 10/10，diff 格式无错误。由 reviewer 独占该阶段的 lib 生成；Lead 与其他成员不并行运行构建或打包。
 
-- [ ] **步骤 3：报告真实验证边界。**
+- [x] **步骤 3：报告真实验证边界。**
 
 真实 Cordis/SDK 回归仍以 RPC fixture 隔离通信，不声称已验证当前安装的 GUI 或真实 Host/browser E2E。不得以缓存路径通过代替冷构造验证。
 
 ## 任务 4：文档及打包交付
 
-- [ ] **步骤 1：更新操作文档。**
+- [x] **步骤 1：更新操作文档。**
 
 env-coder 仅更新 [README](<../../../README.md>)：选择即保存、顶部默认与逐成员配置、保存中短暂锁定、错误重试、默认作用范围和下一 turn 语义。删除旧的设置对象/点击保存操作说明。明确安装包和当前 profile 不会自动同步。
 
-- [ ] **步骤 2：Lead 复跑并打包。**
+- [x] **步骤 2：Lead 复跑并打包。**
 
 全部队员写入结束后，Lead 复跑完整链。把新安装包放到 `artifacts/member-model-autosave/`，不得覆盖已交付的旧包。打包前检查目标文件不存在，打包后校验归档中的源码及浏览器产物与最终验证版本一致。
 
@@ -225,6 +225,6 @@ shasum -a 256 artifacts/member-model-autosave/dsh-agent-team-switchable-0.2.0.tg
 
 当前版本号仍为 0.2.0，以新交付目录区分内容，最终说明不要误用旧包。
 
-- [ ] **步骤 3：交付且准确说明 GUI 状态。**
+- [x] **步骤 3：交付且准确说明 GUI 状态。**
 
 展示本次新包，报告实际测试数量、类型与构建结果。未修改官方代码、未热替换运行中的 profile。用户在空闲维护窗口更新并冷重启/刷新后，才可在原 GUI 中看到新布局；不得把独立原型的表现当成已经部署的插件表现。

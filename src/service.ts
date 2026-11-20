@@ -42,7 +42,7 @@ export class TeamModelSettingsService extends TypertRemoteService {
     }
     const selection = await validateSelection(this.ctx, request.selection)
     await this.state.domain.transform(lead.id, old => {
-      if (this.ctx.agents.get(lead.id) !== lead) throw new TeamModelSettingsError('lead-required', 'The authorized Lead is no longer live.')
+      this.assertLiveLead(lead)
       const row = this.ctx.agentTeams.listMembers(lead).find(candidate => candidate.id === member.id && candidate.name === request.target && candidate.role === 'teammate')
       if (row === undefined || row.status === 'failed' || row.status === 'provisioning') throw new TeamModelSettingsError('member-not-found', 'The teammate is no longer active.')
       const live = this.ctx.agents.get(member.id)
@@ -62,7 +62,10 @@ export class TeamModelSettingsService extends TypertRemoteService {
   async selectTeamDefaultModel(request: TeamSelectDefaultModelRequest): Promise<TeamModelSettingsView> {
     const lead = await this.authorizedLead(request)
     const selection = request.selection === null ? null : await validateSelection(this.ctx, request.selection)
-    await this.state.domain.transform(lead.id, old => ({ ...old, revision: old.revision + 1, defaultModel: selection }))
+    await this.state.domain.transform(lead.id, old => {
+      this.assertLiveLead(lead)
+      return { ...old, revision: old.revision + 1, defaultModel: selection }
+    })
     return this.view(lead)
   }
 
@@ -76,17 +79,25 @@ export class TeamModelSettingsService extends TypertRemoteService {
     const resolved = await this.ctx.sessionController.resolveAgent(request.leadSessionId)
     if ('error' in resolved) throw resolved.error
     const lead = resolved.agent
-    assertFreshTeam(lead)
-    const membership = this.ctx.agentTeams.membership(lead)
-    if (membership.role !== 'lead' || membership.root !== lead || String(membership.id) !== request.leadSessionId) {
-      throw new TeamModelSettingsError('lead-required', 'Only the exact Team Lead may read or edit model settings.')
-    }
+    this.assertLiveLead(lead, request.leadSessionId)
     this.state.domain.assertAvailable()
     return lead
   }
 
-  private view(lead: Agent): TeamModelSettingsView {
+  /** Recheck inside the serialized transform, after validation and queue waits. */
+  private assertLiveLead(lead: Agent, teamId: string = lead.id): void {
+    if (this.ctx.agents.get(lead.id) !== lead) {
+      throw new TeamModelSettingsError('lead-required', 'The authorized Lead is no longer live.')
+    }
     assertFreshTeam(lead)
+    const membership = this.ctx.agentTeams.tryMembership(lead)
+    if (membership === undefined || membership.role !== 'lead' || membership.root !== lead || String(membership.id) !== teamId) {
+      throw new TeamModelSettingsError('lead-required', 'Only the exact Team Lead may read or edit model settings.')
+    }
+  }
+
+  private view(lead: Agent): TeamModelSettingsView {
+    this.assertLiveLead(lead)
     const record = this.state.domain.read(lead.id)
     const members = this.ctx.agentTeams.listMembers(lead).filter(member => member.role === 'teammate').map(member => {
       const live = this.ctx.agents.get(member.id)

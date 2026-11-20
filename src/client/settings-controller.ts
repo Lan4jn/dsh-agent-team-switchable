@@ -4,6 +4,9 @@ import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { TeamModelSelection, TeamModelSettingsView, TeamSelectDefaultModelRequest, TeamSelectMemberModelRequest, TeamSettingsRequest } from '../types.ts'
 
+/** The Host answered with a structured rejection: the stored record did not change. */
+export class TeamSettingsRejectedError extends Error {}
+
 export interface TeamSettingsApi {
   getSettings(request: TeamSettingsRequest): Promise<RemoteResult<TeamModelSettingsView>>
   selectMemberModel(request: TeamSelectMemberModelRequest): Promise<RemoteResult<TeamModelSettingsView>>
@@ -83,7 +86,7 @@ export class TeamSettingsController {
         ? await this.api.selectTeamDefaultModel({ leadSessionId: this.leadSessionId, selection })
         : await this.api.selectMemberModel({ leadSessionId: this.leadSessionId, target, selection: selection! })
       if (!this.valid(generation, request)) return
-      if (!response.ok) throw new Error(response.error.message)
+      if (!response.ok) throw new TeamSettingsRejectedError(response.error.message)
       this.commit(response.value)
     } finally {
       if (this.valid(generation, request)) this.store.update(state => { state.saving = false })

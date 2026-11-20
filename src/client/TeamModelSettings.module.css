@@ -1,18 +1,35 @@
 /** Plugin-owned settings surface. All selectors stay CSS-module scoped. */
 .trigger { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 3px 7px; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font: inherit; font-size: 12px; cursor: pointer; }
 .trigger:hover, .trigger:focus-visible { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2); }
-.modelDialog { width: min(540px, calc(100vw - 32px)); max-height: 100%; overflow-y: auto; padding: 18px; gap: 12px; color: var(--dsw-alias-label-primary); font-size: 12px; }
+.modelDialog { position: fixed; z-index: 1100; box-sizing: border-box; width: min(420px, calc(100vw - 16px)); max-height: min(560px, calc(100vh - 16px)); overflow-y: auto; overscroll-behavior: contain; padding: 12px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-overlay); box-shadow: 0 8px 28px rgb(0 0 0 / .18); color: var(--dsw-alias-label-primary); font-size: 12px; }
+.modelDialog:focus { outline: none; }
+.trigger:focus-visible, .modelDialog button:focus-visible, .modelDialog select:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }
 .modelDialogHeader { display: flex; align-items: center; gap: 10px; }
 .modelDialogHeader h2 { flex: 1; min-width: 0; margin: 0; font-size: 15px; overflow-wrap: anywhere; }
 .modelDialogClose { width: 32px; height: 32px; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
 .modelDialogClose:disabled { opacity: .5; cursor: default; }
-.target, .modelEditor label { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
-.target select, .modelEditor select { box-sizing: border-box; width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
+.defaultSection { margin-top: 10px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-layer-1); }
+.modelEditor label { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.modelEditor select { box-sizing: border-box; width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
 .modelEditor { margin: 8px 0; color: var(--dsw-alias-label-secondary); }
 .modelEditor p, .savePending { margin: 8px 0; overflow-wrap: anywhere; }
 .modelButtons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
 .modelButtons button, .error button { padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); cursor: pointer; }
 .modelButtons button:disabled { opacity: .5; cursor: default; }
+.bulkSection { margin-top: 10px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-layer-1); }
+.bulkHint { margin: 4px 0 8px; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.bulkPicker label { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.bulkPicker select { box-sizing: border-box; width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); }
+.bulkApply { padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 4px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); cursor: pointer; }
+.bulkApply:disabled { opacity: .5; cursor: default; }
+.bulkActions { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.bulkActions > div { flex: 1 1 160px; min-width: 0; }
+.bulkScope { margin: 4px 0 0; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.recoveryAction { padding: 0; border: 0; background: transparent; color: var(--dsw-alias-brand-primary); font: inherit; font-size: 11px; text-decoration: underline; cursor: pointer; }
+.recoveryAction:disabled { opacity: .5; cursor: default; }
+.bulkResults { margin-top: 8px; color: var(--dsw-alias-label-secondary); }
+.bulkResults ul { margin: 4px 0 0; padding-left: 16px; }
+.bulkResults li { overflow-wrap: anywhere; }
 .memberList { display: grid; gap: 8px; margin-top: 14px; }
 .member { min-width: 0; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; }
 .memberHeading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }

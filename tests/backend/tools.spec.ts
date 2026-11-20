@@ -23,7 +23,12 @@ function fixture() {
     allTools.set(candidate.live.id, tools); prompts.set(candidate.live.id, text)
     Object.assign(candidate.live.ctx, {
       tools: { register: (definition: ToolDefinition) => { if (tools.has(definition.name)) throw new Error('duplicate tool'); tools.set(definition.name, definition); return () => { tools.delete(definition.name) } } },
-      systemPrompt: { getSectionOrder: () => 0, section: (section: { text: string }) => { text.push(section.text); return () => { text.splice(text.indexOf(section.text), 1) } } },
+      systemPrompt: {
+        getSectionOrder: () => 0,
+        getContextOrder: () => 0,
+        section: (section: { text: string }) => { text.push(section.text); return () => { text.splice(text.indexOf(section.text), 1) } },
+        context: (context: { text: () => string }) => { const t = context.text(); text.push(t); return () => { text.splice(text.indexOf(t), 1) } },
+      },
     })
   }
   prepare(lead); prepare(child)

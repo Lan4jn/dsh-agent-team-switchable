@@ -7,7 +7,9 @@ import { backendFixture, deferred } from '../support/backend-fixtures.ts'
 async function fixture() {
   const f = backendFixture(); const lead = f.agent('lead'); const child = f.agent('child', lead.live)
   child.event('turn/start', { turn: 3 }); child.request({ provider: 'p', model: 'old' })
-  const rows = new Map<string, TeamSettingsRecord>(); const domain = new SettingsDomain({ get: id => rows.get(id), put: async (id, value) => { rows.set(id, value) } })
+  const rows = new Map<string, TeamSettingsRecord>()
+  const put = vi.fn(async (id: string, value: TeamSettingsRecord) => { rows.set(id, value) })
+  const domain = new SettingsDomain({ get: id => rows.get(id), put })
   const ctx = new Context()
   ctx.provide('agents', f.ctx.agents)
   ctx.provide('agentTeams', f.ctx.agentTeams)
@@ -15,8 +17,76 @@ async function fixture() {
   const resolveAgent = vi.fn(async (id: string) => ({ agent: f.registry.get(id)! }))
   ctx.provide('sessionController', { resolveAgent } as never)
   const service = new TeamModelSettingsService(ctx, { domain })
-  return { f, ctx, lead, child, service, domain, resolveAgent, rows }
+  return { f, ctx, lead, child, service, domain, resolveAgent, rows, put }
 }
+
+type Fixture = Awaited<ReturnType<typeof fixture>>
+const staleLeadModes = ['removed', 'replaced', 'missing-membership', 'teammate-role', 'different-root', 'different-team'] as const
+
+function invalidateLead(f: Fixture, mode: typeof staleLeadModes[number]): void {
+  if (mode === 'removed') f.f.registry.delete('lead')
+  else if (mode === 'replaced') f.f.agent('lead')
+  else if (mode === 'missing-membership') f.f.roles.delete(f.lead.live)
+  else {
+    const membership = f.f.roles.get(f.lead.live)!
+    f.f.roles.set(f.lead.live, { ...membership,
+      ...mode === 'teammate-role' ? { role: 'teammate' as const } : {},
+      ...mode === 'different-root' ? { root: f.child.live } : {},
+      ...mode === 'different-team' ? { id: 'other-team' } : {},
+    })
+  }
+}
+
+function select(f: Fixture, kind: 'default' | 'member' | 'clear') {
+  const selection = { provider: 'q', model: 'next' }
+  return kind === 'member'
+    ? f.service.selectMemberModel({ leadSessionId: f.lead.live.id, target: 'worker', selection })
+    : f.service.selectTeamDefaultModel({ leadSessionId: f.lead.live.id, selection: kind === 'clear' ? null : selection })
+}
+
+describe.each(['default', 'member'] as const)('%s 提交时的 Lead 生命周期', kind => {
+  it.each(staleLeadModes)('模型异步验证中 Lead %s，拒绝且不写入', async mode => {
+    const f = await fixture(); const entered = deferred(); const release = deferred()
+    vi.spyOn(f.f.ctx.llm, 'resolveCallConfig').mockImplementation(async config => {
+      entered.resolve(); await release.promise; return config
+    })
+    const before = f.domain.read('lead')
+    const pending = select(f, kind)
+    const rejection = expect(pending).rejects.toMatchObject({ code: 'team-model-settings/lead-required' })
+    await entered.promise
+    invalidateLead(f, mode)
+    release.resolve(); await rejection
+    expect(f.put).not.toHaveBeenCalled()
+    expect(f.rows.has('lead')).toBe(false)
+    expect(f.domain.read('lead')).toBe(before)
+  })
+})
+
+describe.each(['default', 'member', 'clear'] as const)('%s 排队后的 Lead 生命周期', kind => {
+  it.each(staleLeadModes)('已入队等待持久化时 Lead %s，仅前序写入提交', async mode => {
+    const f = await fixture(); const entered = deferred(); const release = deferred(); const enqueued = deferred()
+    const accepted = { ...f.domain.read('lead'), revision: 1, defaultModel: { provider: 'p', model: 'a' } }
+    f.put.mockImplementationOnce(async (id, value) => {
+      entered.resolve(); await release.promise; f.rows.set(id, value)
+    })
+    const first = f.domain.transform('lead', () => accepted)
+    await entered.promise
+    const transform = f.domain.transform.bind(f.domain)
+    vi.spyOn(f.domain, 'transform').mockImplementation((id, change) => {
+      const operation = transform(id, change)
+      enqueued.resolve(); return operation
+    })
+    const pending = select(f, kind)
+    const rejection = expect(pending).rejects.toMatchObject({ code: 'team-model-settings/lead-required' })
+    await enqueued.promise
+    expect(f.put).toHaveBeenCalledTimes(1)
+    invalidateLead(f, mode)
+    release.resolve(); await first; await rejection
+    expect(f.put).toHaveBeenCalledTimes(1)
+    expect(f.rows.get('lead')).toEqual(accepted)
+    expect(f.domain.read('lead')).toEqual(accepted)
+  })
+})
 
 describe('真正 Typert Remote RPC', () => {
   it('真实 key/namespace 与共享 view；每次都走 resolveAgent，即使 live 已缓存', async () => {
@@ -37,6 +107,43 @@ describe('真正 Typert Remote RPC', () => {
     f.resolveAgent.mockResolvedValueOnce({ error: denied } as never)
     await expect(f.service.getSettings({ leadSessionId: f.lead.live.id })).rejects.toBe(denied)
     await expect(f.service.getSettings({ leadSessionId: f.child.live.id })).rejects.toThrow('Team Lead')
+  })
+
+  it('resolveAgent 返回被替换旧 Agent 时拒绝，不绕回新 registry 身份', async () => {
+    const f = await fixture()
+    f.resolveAgent.mockImplementationOnce(async () => {
+      f.f.agent('lead')
+      return { agent: f.lead.live }
+    })
+    await expect(f.service.getSettings({ leadSessionId: f.lead.live.id })).rejects.toMatchObject({ code: 'team-model-settings/lead-required' })
+    expect(f.put).not.toHaveBeenCalled()
+  })
+
+  it('授权通过后 await 的微任务间隙 Lead 被替换，get 不返回成功 view', async () => {
+    const f = await fixture()
+    const tryMembership = f.f.ctx.agentTeams.tryMembership.bind(f.f.ctx.agentTeams)
+    vi.spyOn(f.f.ctx.agentTeams, 'tryMembership').mockImplementationOnce(agent => {
+      const membership = tryMembership(agent)
+      queueMicrotask(() => f.f.agent('lead'))
+      return membership
+    })
+    await expect(f.service.getSettings({ leadSessionId: f.lead.live.id })).rejects.toMatchObject({ code: 'team-model-settings/lead-required' })
+  })
+
+  it.each(['default', 'member'] as const)('%s put 已开始后 Lead 失效，保留确认写入但拒绝成功 view', async kind => {
+    const f = await fixture(); const entered = deferred(); const release = deferred()
+    f.put.mockImplementationOnce(async (id, value) => {
+      entered.resolve(); await release.promise; f.rows.set(id, value)
+    })
+    const pending = select(f, kind)
+    const rejection = expect(pending).rejects.toMatchObject({ code: 'team-model-settings/lead-required' })
+    await entered.promise
+    invalidateLead(f, 'replaced')
+    release.resolve(); await rejection
+    expect(f.put).toHaveBeenCalledTimes(1)
+    expect(f.domain.read('lead').revision).toBe(1)
+    expect(f.domain.read('lead')).toEqual(f.rows.get('lead'))
+    expect(kind === 'default' ? f.domain.read('lead').defaultModel : f.domain.read('lead').choices.child.selection).toEqual({ provider: 'q', model: 'next' })
   })
 
   it('选择只写 choices UUID 与最后 own turn，返回 view 不使用官方 options.model', async () => {

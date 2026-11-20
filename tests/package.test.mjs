@@ -40,7 +40,7 @@ function browserRealm() {
 
 test('additive bundle inserts only its own root and never disables or replaces official rows', async () => {
   assert.equal(manifest.name, packageName)
-  assert.equal(manifest.version, '0.2.0')
+  assert.equal(manifest.version, '0.2.4')
   assert.equal(manifest.dsh.client.platform, 'web')
   const patch = await readFile(join(root, manifest.dsh.bundle.patch), 'utf8')
   assert.match(patch, /- insert:/)
@@ -49,7 +49,9 @@ test('additive bundle inserts only its own root and never disables or replaces o
   assert.doesNotMatch(patch, /disabled:|@deepseek-ai\/|name:.*\/(?:runtime|tools|client)/)
   assert.equal((patch.match(/\bid:/g) ?? []).length, 1)
   assert.equal(manifest.peerDependenciesMeta['@deepseek-ai/dsh-experimental-agent-team'].optional, true)
-  assert.equal(manifest.peerDependencies['@deepseek-ai/dsh-storage-domain'], '0.2.0-rc.2')
+  assert.equal(manifest.peerDependencies['@deepseek-ai/dsh-storage-domain'], '0.2.1-rc.2')
+  assert.equal(manifest.peerDependencies['@deepseek-ai/cordis'], '4.0.5')
+  assert.equal(manifest.peerDependencies['@deepseek-ai/schemastery'], '3.18.5')
 })
 
 test('replacement runtime entries and copied team implementation no longer exist', async () => {
@@ -115,7 +117,7 @@ test('browser factory uses shared singletons and injects its hashed CSS exactly 
   assert.equal(realm.styles.length, 0)
   const plugin = realm.execute()
   assert.equal(typeof plugin.apply, 'function')
-  assert.deepEqual(plain(plugin.inject), ['slots', 'locale', 'remote', 'modelDirectories'])
+  assert.deepEqual(plain(plugin.inject), ['slots', 'locale', 'remote', 'remote.session', 'modelDirectories', 'sessions'])
   assert.equal(realm.styles.length, 1)
   assert.match(realm.styles[0].id, /^dsh-agent-team-switchable-[a-f0-9]{12}$/)
   assert.match(realm.styles[0].textContent, /\.team_[A-Za-z0-9_-]+_/)
@@ -148,6 +150,50 @@ test('browser mounts only its own remote/header action and releases owned effect
   await effects.at(-1)()()
   assert.equal(uiDisposed, 1)
   assert.equal(remoteDisposed, 1)
+})
+
+test('compiled header action retains the public session until its catalog lease is released', async () => {
+  const calls = [], slots = []
+  let resolveReady, rejectReady
+  let ready = new Promise(resolve => { resolveReady = resolve })
+  const store = { getSnapshot() { return {} } }
+  const ctx = {
+    remote: { async $mount() { return async () => {} }, 'team-model-settings': {} },
+    locale: { register() { return () => {} } },
+    sessions: { retain(id, options) {
+      calls.push(`retain:${id}`)
+      assert.equal(options.source, 'teamModelSettings')
+      assert.ok(options.signal instanceof AbortSignal)
+      return { ready, release() { calls.push('release') } }
+    } },
+    modelDirectories: { directoryFor(id) {
+      calls.push(`directory:${id}`)
+      return { store, load() { calls.push('load') } }
+    } },
+    effect() {},
+    slots: { inject(_key, fn) { fn() }, register(definition) { slots.push(definition) } },
+    inject(_keys, fn) { fn(ctx); return Object.assign(Promise.resolve(), { async dispose() {} }) },
+  }
+  await browserRealm().execute().apply(ctx)
+  const actions = slots[0].inject()
+  const controller = new AbortController()
+  const acquisition = actions.acquireCatalogFor('lead', controller.signal)
+  assert.deepEqual(calls, ['retain:lead'], 'directory lookup must wait for the session reference')
+  resolveReady()
+  const lease = await acquisition
+  assert.equal(lease.directory, store)
+  await lease.load()
+  controller.abort()
+  lease.release()
+  assert.deepEqual(calls, ['retain:lead', 'directory:lead', 'load', 'release'])
+
+  calls.length = 0
+  ready = new Promise((_resolve, reject) => { rejectReady = reject })
+  const failedAcquisition = actions.acquireCatalogFor('missing', new AbortController().signal)
+  const error = new Error('Session reference unavailable')
+  rejectReady(error)
+  await assert.rejects(failedAcquisition, value => value === error)
+  assert.deepEqual(calls, ['retain:missing', 'release'], 'readiness failure must release without catalog lookup')
 })
 
 test('compiled artifacts contain no Core implementations, personal paths or replacement routes', async () => {
