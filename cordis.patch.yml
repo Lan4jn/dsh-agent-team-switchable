@@ -1,8 +1,16 @@
-# 纯增强：只注册本插件，不禁用、不替换、不自动启用任何官方组件。
-# 官方 Agent Teams 和持久 Storage Domain 由用户现有 profile 提供。
+# dsh-team-member-model bundle patch —— 组合包声明
+#
+# 为什么需要这个文件：宿主启动时遍历 profile 的 `dsh.profile.bundles`，逐个解析包目录、
+# 要求包里声明 `dsh.bundle`（见 package.json 的 `dsh.bundle.patch` 指向本文件），
+# 再把本文件当**一层 patch** 加载（dsh-app-boot `loadProfileDirectory`）。
+#
+# 这样做的收益（对照手写 profile 托管块）：
+#   1. 插件出现在「插件 → 已安装」里，带官方开关；开关由 plugin-manager 直接改
+#      `dsh.profile.bundles` 并热重载该组合包的行，**不需要重启**；
+#   2. 条目随包走，profile 的 cordis.patch.yml 不再需要手搓托管块；
+#   3. 解析不到包、或声明不兼容时，宿主只跳过这一层并记录原因，不会让启动失败。
+#
+# 注意：条目 id 必须与开关写入的目标一致，且不要与 profile 里的其它条目重名。
 - insert:
-    - id: team-model-settings
-      name: dsh-agent-team-switchable
-      config:
-        freshProvider: spawn
-        forkProvider: fork
+    - id: team-member-model
+      name: 'dsh-team-member-model'
